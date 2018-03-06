@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
+	"path"
 	"test/LoveHome/models"
 )
 
@@ -56,6 +57,59 @@ func (c *UserControllers) Reg() {
 	c.SetSession("name", user.Name)
 	c.SetSession("user_id", id)
 	c.SetSession("mobile", user.Mobile)
+
+	return
+}
+
+func (this *UserControllers) UpLoadAvatar() {
+	resp := make(map[string]interface{})
+	resp["errno"] = models.RECODE_OK
+	resp["errmsg"] = models.RECODE_OK
+
+	defer this.RetData(resp)
+
+	file, header, err := this.GetFile("avatar")
+	if err != nil {
+		resp["errno"] = models.RECODE_SERVERERR
+		resp["errmsg"] = models.RecodeText(models.RECODE_SERVERERR)
+		return
+	}
+
+	filebuffer := make([]byte, header.Size)
+	if _, err := file.Read(filebuffer); err != nil {
+
+		resp["errno"] = models.RECODE_IOERR
+		resp["errmsg"] = models.RecodeText(models.RECODE_IOERR)
+		return
+	}
+
+	suffix := path.Ext(header.Filename)
+
+	groupName, fileId, err := models.FDFSUploadByBuffer(filebuffer, suffix[1:])
+	if err != nil {
+
+		resp["errno"] = models.RECODE_IOERR
+		resp["errmsg"] = models.RecodeText(models.RECODE_IOERR)
+		return
+	}
+	beego.Info("fdfs upload succ groupname = ", groupName, " fileid = ", fileId)
+
+	user_id := this.GetSession("user_id")
+	user := models.User{Id: user_id.(int), Avatar_url: fileId}
+
+	o := orm.NewOrm()
+
+	if _, err := o.Update(&user, "avatar_url"); err != nil {
+		resp["errno"] = models.RECODE_DBERR
+		resp["errmsg"] = models.RECODE_DBERR
+		return
+	}
+
+	avatar_url := "http://192.168.191.140:8080/" + fileId
+
+	url_map := make(map[string]interface{})
+	url_map["avatar_url"] = avatar_url
+	resp["data"] = url_map
 
 	return
 }

@@ -16,5 +16,7 @@ func init() {
 
 	beego.Router("/api/v1.0/users", &controllers.UserControllers{}, "post:Reg")
 
+	beego.Router("/api/v1.0/user/avatar", &controllers.UserControllers{}, "post:UpLoadAvatar")
+
 	beego.Router("/api/v1.0/sessions", &controllers.UserControllers{}, "post:Login")
 }
